@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Secure Payment</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font Awesome -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+  />
+
+  <!-- Paystack -->
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-center justify-center px-4">
+
+  <div class="w-full max-w-md">
+
+    <!-- Card Preview (Visual only) -->
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl p-5 mb-6 shadow-lg">
+      <div class="flex justify-between items-center mb-6">
+        <span class="uppercase tracking-wide text-sm">Secure Payment</span>
+        <i class="fas fa-lock text-3xl"></i>
+      </div>
+
+      <div class="text-xl tracking-widest mb-4">
+        Pay safely using Paystack
+      </div>
+
+      <div class="flex justify-between text-sm opacity-80">
+        <span>No card data stored</span>
+        <span>SSL Encrypted</span>
+      </div>
+    </div>
+
+    <!-- Payment Form -->
+    <form
+      id="payment-form"
+      class="bg-white rounded-lg shadow-lg p-6"
+    >
+      <h2 class="text-2xl font-semibold text-center mb-5">Make Payment</h2>
+
+      <!-- Email -->
+      <label class="block text-sm font-medium">Email Address</label>
+      <input
+        id="email"
+        type="email"
+        required
+        class="w-full border px-3 py-2 rounded mb-4"
+        placeholder="user@example.com"
+      />
+
+      <!-- Amount -->
+      <label class="block text-sm font-medium">Amount (KES)</label>
+      <input
+        id="amount"
+        type="number"
+        required
+        class="w-full border px-3 py-2 rounded mb-6"
+        placeholder="1000"
+      />
+
+      <!-- Pay Button -->
+      <button
+        id="pay-btn"
+        type="submit"
+        class="w-full bg-blue-600 text-white py-2 rounded flex items-center justify-center gap-2 hover:bg-blue-700 transition"
+      >
+        <span id="btn-text">Pay Now</span>
+        <svg id="spinner" class="hidden w-5 h-5 animate-spin" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" stroke="white" stroke-width="4" fill="none"/>
+        </svg>
+      </button>
+
+      <!-- Trust Icons -->
+      <div class="flex justify-center gap-4 mt-4 text-gray-500 text-xl">
+        <i class="fab fa-cc-visa"></i>
+        <i class="fab fa-cc-mastercard"></i>
+        <i class="fab fa-cc-amex"></i>
+      </div>
+
+      <p class="text-xs text-gray-500 mt-2 text-center flex items-center justify-center gap-1">
+        <i class="fas fa-lock"></i>
+        Payments secured by Paystack
+      </p>
+
+      <!-- Success -->
+      <div id="success" class="hidden text-center mt-6">
+        <img
+          src="https://cdn-icons-png.flaticon.com/512/845/845646.png"
+          class="w-20 mx-auto mb-3"
+        />
+        <h3 class="text-xl font-semibold text-green-600">
+          Payment Successful
+        </h3>
+        <p class="text-gray-500 text-sm">
+          Your payment has been verified
+        </p>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById("payment-form");
+    const spinner = document.getElementById("spinner");
+    const btnText = document.getElementById("btn-text");
+    const success = document.getElementById("success");
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const email = document.getElementById("email").value;
+      const amount = document.getElementById("amount").value;
+
+      btnText.textContent = "Processing...";
+      spinner.classList.remove("hidden");
+
+      let handler = PaystackPop.setup({
+        key: "pk_test_e1709d5ae7ef5da66254c52d3aa38222addf13b7",
+        email: email,
+        amount: amount * 100,
+        currency: "KES",
+
+        callback: function (response) {
+          fetch("/.netlify/functions/verify-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reference: response.reference })
+          })
+          .then(res => res.json())
+          .then(data => {
+            spinner.classList.add("hidden");
+            btnText.textContent = "Pay Now";
+
+            if (data.verified) {
+              success.classList.remove("hidden");
+            } else {
+              alert("Payment verification failed");
+            }
+          })
+          .catch(() => {
+            spinner.classList.add("hidden");
+            btnText.textContent = "Pay Now";
+            alert("Verification error");
+          });
+        },
+
+        onClose: function () {
+          spinner.classList.add("hidden");
+          btnText.textContent = "Pay Now";
+        }
+      });
+
+      handler.openIframe();
+    });
+  </script>
+
+</body>
+</html>
+
