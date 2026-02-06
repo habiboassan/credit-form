@@ -1,10 +1,17 @@
 export async function handler(event) {
-  const { reference } = JSON.parse(event.body);
+  if (event.httpMethod !== "POST") {
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: "Method not allowed" }),
+    };
+  }
+
+  const { reference } = JSON.parse(event.body || "{}");
 
   if (!reference) {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: "Missing payment reference" }),
+      body: JSON.stringify({ error: "Missing reference" }),
     };
   }
 
@@ -20,25 +27,39 @@ export async function handler(event) {
 
     const data = await response.json();
 
-    if (data.data.status === "success") {
+    console.log("Paystack response:", data);
+
+    if (data.status === true && data.data.status === "success") {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          verified: true,
-          amount: data.data.amount,
-          customer: data.data.customer.email,
+          success: true,
+          data: {
+            amount: data.data.amount / 100,
+            reference: data.data.reference,
+            status: data.data.status,
+            email: data.data.customer.email,
+          },
         }),
       };
-    } else {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ verified: false }),
-      };
     }
+
+    return {
+      statusCode: 400,
+      body: JSON.stringify({
+        success: false,
+        message: "Payment not successful",
+        paystackStatus: data.data?.status,
+      }),
+    };
   } catch (error) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Verification failed" }),
+      body: JSON.stringify({
+        error: "Verification error",
+        details: error.message,
+      }),
     };
   }
 }
+
